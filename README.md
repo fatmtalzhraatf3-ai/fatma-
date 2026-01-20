@@ -1,62 +1,146 @@
-<!DOCTYPE html><html lang="ar" dir="rtl">
+<!DOCTYPE html>
+<html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Find My Doctor</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta charset="UTF-8">
+  <title>أوجد أقرب طبيب</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
   <style>
-    body{margin:0;font-family:Arial;background:#f4f6f8}
-    .screen{display:none;padding:20px}
-    .active{display:block}
-    button{padding:12px 18px;border:none;border-radius:10px;background:#0d6efd;color:#fff;font-size:16px}
-    select{width:100%;padding:12px;margin:15px 0;border-radius:8px}
-    #map{height:60vh;border-radius:12px}
-    h1,h2{text-align:center}
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f5f6fa;
+      direction: rtl;
+    }
+
+    header {
+      background: #2c7be5;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .container {
+      padding: 15px;
+    }
+
+    select, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1a5fd0;
+    }
+
+    #result {
+      margin-top: 15px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    #map {
+      height: 300px;
+      margin-top: 15px;
+      border-radius: 10px;
+    }
   </style>
 </head>
-<body><!-- Screen 1 --><div id="screen1" class="screen active">
-  <h1>🩺 Find My Doctor</h1>
-  <p style="text-align:center">اعرف أقرب دكتور حسب الأعراض</p>
-  <button onclick="goToSymptoms()">ابدأ</button>
-</div><!-- Screen 2 --><div id="screen2" class="screen">
-  <h2>اختاري العرض</h2>
+
+<body>
+
+<header>
+  🩺 أوجد أقرب طبيب
+</header>
+
+<div class="container">
+
+  <label>اختاري العَرَض:</label>
   <select id="symptom">
     <option value="">-- اختاري --</option>
-    <option value="باطنة">مغص</option>
-    <option value="صدر">كحة / ضيق تنفس</option>
-    <option value="مخ وأعصاب">صداع / دوخة</option>
-    <option value="أسنان">ألم أسنان</option>
+    <option value="باطنة">صداع / تعب عام</option>
+    <option value="صدرية">كحة / ضيق تنفس</option>
+    <option value="جلدية">حساسية / طفح جلدي</option>
+    <option value="عظام">آلام مفاصل</option>
   </select>
-  <button onclick="findDoctor()">التالي</button>
-</div><!-- Screen 3 --><div id="screen3" class="screen">
-  <h2 id="result"></h2>
+
+  <button onclick="findDoctor()">ابحث عن أقرب طبيب</button>
+
+  <div id="result"></div>
   <div id="map"></div>
-</div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>
-  const screens = [screen1, screen2, screen3];
-  function show(n){screens.forEach(s=>s.classList.remove('active'));screens[n].classList.add('active');}
-  function goToSymptoms(){show(1);}
 
-  const doctors = {
-    "باطنة": {name:"د. أحمد علي",lat:26.155,lng:32.716},
-    "صدر": {name:"د. محمد حسن",lat:26.160,lng:32.720},
-    "مخ وأعصاب": {name:"د. سارة محمود",lat:26.150,lng:32.710},
-    "أسنان": {name:"د. ريم حسين",lat:26.158,lng:32.718}
-  };
+</div>
 
-  function findDoctor(){
-    const spec=document.getElementById('symptom').value;
-    if(!spec){alert('اختاري عرض');return;}
-    show(2);
-    document.getElementById('result').innerText='التخصص المناسب: '+spec;
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    navigator.geolocation.getCurrentPosition(pos=>{
-      const user=[pos.coords.latitude,pos.coords.longitude];
-      const doc=doctors[spec];
-      const map=L.map('map').setView(user,14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      L.marker(user).addTo(map).bindPopup('موقعك');
-      L.marker([doc.lat,doc.lng]).addTo(map).bindPopup(doc.name);
-    });
+<script>
+  let map;
+
+  function findDoctor() {
+    const symptom = document.getElementById("symptom").value;
+    const result = document.getElementById("result");
+
+    if (!symptom) {
+      alert("من فضلك اختاري العَرَض");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      alert("الموقع غير مدعوم على جهازك");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+
+        result.innerHTML = "✔️ التخصص المناسب: " + symptom;
+
+        // موقع دكتور تجريبي قريب
+        const doctorLat = userLat + 0.005;
+        const doctorLng = userLng + 0.005;
+
+        if (map) {
+          map.remove();
+        }
+
+        map = L.map('map').setView([userLat, userLng], 14);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        L.marker([userLat, userLng])
+          .addTo(map)
+          .bindPopup("📍 موقعك")
+          .openPopup();
+
+        L.marker([doctorLat, doctorLng])
+          .addTo(map)
+          .bindPopup("🧑‍⚕️ طبيب " + symptom);
+
+      },
+      () => {
+        alert("لم يتم تحديد موقعك");
+      }
+    );
   }
-</script></body>
+</script>
+
+</body>
 </html>
